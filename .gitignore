@@ -1,0 +1,48 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+.venv/
+env/
+venv/
+ENV/
+*.egg-info/
+dist/
+build/
+
+# PyInstaller
+*.spec
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Build version tracking (local only)
+.buildversion
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Project specific
+*.log
+
+# Local execution data and assets
+missions/
+
+# Personal configuration (copy config.example.yaml to config.yaml and edit)
+config/config.yaml
+config/schedule.yaml
+
+# Internal documents
+LEGACY_ROADMAP.md
+ROADMAP_OLD.md

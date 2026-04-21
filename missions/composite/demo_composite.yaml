@@ -1,0 +1,11 @@
+name: demo_composite
+type: composite
+description: "Demo composite mission — opens Notepad and types a line of text."
+grace_period: 5
+steps:
+  # Wait for Notepad window to appear
+  - wait: 1.0
+  # Type some text
+  - mission: demo
+  # Wait before finishing
+  - wait: 0.5

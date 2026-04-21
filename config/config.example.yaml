@@ -1,0 +1,24 @@
+safety:
+  # Set to true to require the target window to be focused before sending any input.
+  check_window_focus: true
+  # XisWalker will only send input when one of these strings appears in the active window title.
+  window_patterns:
+    - XisWalker
+    - MyApp
+    - Windows PowerShell
+    - Command Prompt
+    - cmd
+
+input:
+  # Key to stop recording (default: esc)
+  recording_stop_key: esc
+  # Key combination to stop playback (default: ctrl+f1)
+  playback_stop_key: ctrl+f1
+  # Show on-screen overlay during recording/playback
+  show_overlay: true
+
+# OCR backend configuration (optional — only needed for OCR-based missions)
+# ocr:
+#   backend: pytesseract        # "pytesseract" | "ollama"
+#   ollama_model: llava         # Ollama model name (when backend = "ollama")
+#   ollama_url: http://localhost:11434

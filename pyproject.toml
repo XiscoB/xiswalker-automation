@@ -1,0 +1,31 @@
+[build-system]
+requires = ["setuptools>=64"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "xiswalker"
+version = "0.1.0"
+description = "Screen-driven UI validation engine for desktop and emulator interfaces"
+requires-python = ">=3.9"
+dependencies = [
+    "pynput",
+    "pywin32",
+    "pyyaml",
+    "opencv-python",
+    "pillow",
+    "colorama",
+    "tqdm",
+    "schedule",
+    "pytesseract",
+]
+
+[project.scripts]
+xiswalker = "xiswalker.cli:main"
+
+[project.optional-dependencies]
+dev = ["pytest"]
+ocr = ["pytesseract"]
+llm = ["ollama"]
+
+[tool.setuptools]
+packages = ["xiswalker"]
