@@ -10,12 +10,14 @@ from typing import Optional
 class InputEvent:
     """A single recorded input event."""
 
-    type: str  # "key_press", "key_release", "mouse_click", "mouse_press", "mouse_release", "mouse_move", "visual_click", "template_find", "relative_click"
+    type: str  # "key_press", "key_release", "mouse_click", "mouse_press", "mouse_release", "mouse_move", "mouse_scroll", "visual_click", "template_find", "relative_click"
     timestamp: float  # seconds since recording start
     key: Optional[str] = None  # key name (for keyboard events)
     x: Optional[int] = None  # mouse x coordinate (absolute or relative offset)
     y: Optional[int] = None  # mouse y coordinate (absolute or relative offset)
     button: Optional[str] = None  # mouse button name
+    dx: Optional[int] = None  # mouse scroll x delta
+    dy: Optional[int] = None  # mouse scroll y delta
     # Visual fields
     template: Optional[str] = None  # template image filename
     roi: Optional[list[int]] = None  # [x, y, w, h] region of interest
@@ -90,6 +92,7 @@ class CompositeStep:
     ocr_roi: Optional[list] = None              # [x, y, w, h] region to search
     ocr_timeout: Optional[float] = None         # Max search time in seconds (default: 5.0)
     ocr_case_sensitive: Optional[bool] = None   # Case-sensitive matching (default: False)
+    ocr_partial_match: Optional[bool] = None    # Partial substring match (default: False)
     # OCR timer step — reads a timer from screen and waits for it to expire
     ocr_timer: Optional[bool] = None            # True to enable timer-wait mode
     ocr_timer_pre_scan_delay: Optional[float] = None  # Seconds to wait before first OCR scan

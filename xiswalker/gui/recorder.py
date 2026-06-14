@@ -66,6 +66,11 @@ class RecorderTab(ttk.Frame):
         self.ent_cal_name = ttk.Entry(cal_frame)
         self.ent_cal_name.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=5, pady=5)
         
+        if not hasattr(self, 'var_capture_right_click'):
+            self.var_capture_right_click = tk.BooleanVar(value=False)
+            
+        ttk.Checkbutton(cal_frame, text="Right-Click Drag", variable=self.var_capture_right_click).pack(side=tk.LEFT, padx=5, pady=5)
+        
         btn_capture = ttk.Button(cal_frame, text="Capture Template", command=self.capture_template)
         btn_capture.pack(side=tk.RIGHT, padx=5, pady=5)
         
@@ -205,9 +210,11 @@ class RecorderTab(ttk.Frame):
         hint.attributes("-alpha", 0.85)
         sw = hint.winfo_screenwidth()
         hint.geometry(f"+{sw // 2 - 200}+8")
+        use_right_click = getattr(self, 'var_capture_right_click', tk.BooleanVar(value=False)).get()
+        click_type = "Right-click" if use_right_click else "Click"
         tk.Label(
             hint,
-            text=f"  Click and drag to capture template: '{name}'  ",
+            text=f"  {click_type} and drag to capture template: '{name}'  ",
             font=("Segoe UI", 11, "bold"),
             bg="#1e88e5", fg="white", padx=12, pady=8,
         ).pack()
@@ -215,13 +222,13 @@ class RecorderTab(ttk.Frame):
 
         threading.Thread(
             target=self._run_capture_thread,
-            args=(name, hint),
+            args=(name, hint, use_right_click),
             daemon=True,
         ).start()
 
-    def _run_capture_thread(self, name: str, hint) -> None:
+    def _run_capture_thread(self, name: str, hint, use_right_click: bool = False) -> None:
         try:
-            _capture_template_logic(name)
+            _capture_template_logic(name, use_right_click=use_right_click)
             self.app.after(0, lambda: self._capture_done(hint, name, None))
         except Exception as exc:
             self.app.after(0, lambda: self._capture_done(hint, name, exc))

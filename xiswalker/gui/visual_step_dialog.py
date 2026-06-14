@@ -11,12 +11,13 @@ ATOMIC_DIR = Path("missions/atomic")
 class VisualStepDialog(tk.Toplevel):
     """Dialog for creating a visual conditional step."""
     
-    def __init__(self, parent, app):
+    def __init__(self, parent, app, initial_data=None):
         super().__init__(parent)
         self.app = app
         self.result = None
+        self.initial_data = initial_data
         
-        self.title("Create Visual Conditional Step")
+        self.title("Edit Visual Conditional Step" if initial_data else "Create Visual Conditional Step")
         self.geometry("900x600")
         self.minsize(800, 500)
         
@@ -35,6 +36,9 @@ class VisualStepDialog(tk.Toplevel):
         self._refresh_templates()
         self._refresh_atomics()
         
+        if self.initial_data:
+            self._load_initial_data()
+            
         # Make modal
         self.transient(parent)
         self.grab_set()
@@ -89,16 +93,22 @@ class VisualStepDialog(tk.Toplevel):
         found_frame.pack(fill=tk.X, pady=(0, 10))
         
         ttk.Label(found_frame, text="Execute Atomic:").pack(anchor=tk.W, padx=5, pady=(5, 0))
-        self.cmb_on_found = ttk.Combobox(found_frame, state="readonly")
-        self.cmb_on_found.pack(fill=tk.X, padx=5, pady=5)
+        found_c_frame = ttk.Frame(found_frame)
+        found_c_frame.pack(fill=tk.X, padx=5, pady=5)
+        self.cmb_on_found = ttk.Combobox(found_c_frame, state="readonly")
+        self.cmb_on_found.pack(side=tk.LEFT, fill=tk.X, expand=True)
+        ttk.Button(found_c_frame, text="+ New", width=6, command=lambda: self._create_new_atomic(self.cmb_on_found)).pack(side=tk.LEFT, padx=(5, 0))
         
         # 4. If Not Found
         not_found_frame = ttk.LabelFrame(left_panel, text="4. If Template NOT Found")
         not_found_frame.pack(fill=tk.X, pady=(0, 10))
         
         ttk.Label(not_found_frame, text="Execute Atomic (optional):").pack(anchor=tk.W, padx=5, pady=(5, 0))
-        self.cmb_on_not_found = ttk.Combobox(not_found_frame, state="readonly")
-        self.cmb_on_not_found.pack(fill=tk.X, padx=5, pady=5)
+        not_found_c_frame = ttk.Frame(not_found_frame)
+        not_found_c_frame.pack(fill=tk.X, padx=5, pady=5)
+        self.cmb_on_not_found = ttk.Combobox(not_found_c_frame, state="readonly")
+        self.cmb_on_not_found.pack(side=tk.LEFT, fill=tk.X, expand=True)
+        ttk.Button(not_found_c_frame, text="+ New", width=6, command=lambda: self._create_new_atomic(self.cmb_on_not_found)).pack(side=tk.LEFT, padx=(5, 0))
         
         ttk.Label(not_found_frame, text="Otherwise:").pack(anchor=tk.W, padx=5, pady=(5, 0))
         self.var_on_fail = tk.StringVar(value="skip")
@@ -123,7 +133,8 @@ class VisualStepDialog(tk.Toplevel):
         btn_frame.pack(fill=tk.X, side=tk.BOTTOM, pady=(10, 0))
         
         ttk.Button(btn_frame, text="Cancel", command=self.destroy).pack(side=tk.RIGHT, padx=5)
-        ttk.Button(btn_frame, text="Add to Mission", command=self._on_confirm).pack(side=tk.RIGHT, padx=5)
+        btn_text = "Update Step" if self.initial_data else "Add to Mission"
+        ttk.Button(btn_frame, text=btn_text, command=self._on_confirm).pack(side=tk.RIGHT, padx=5)
         
         # RIGHT PANEL - Image Preview
         right_panel = ttk.LabelFrame(main_container, text="Click on Image to Set Action Point")
@@ -188,6 +199,41 @@ class VisualStepDialog(tk.Toplevel):
 
         self.cmb_on_found.set("(None - just click at point)")
         self.cmb_on_not_found.set("(None)")
+        
+    def _load_initial_data(self):
+        """Populate the dialog with initial data."""
+        data = self.initial_data
+        if "visual_condition" in data:
+            self.cmb_template.set(data["visual_condition"])
+            self._on_template_select()
+            
+        if "visual_threshold" in data and data["visual_threshold"] is not None:
+            self.threshold.set(data["visual_threshold"])
+        if "visual_timeout" in data and data["visual_timeout"] is not None:
+            self.timeout.set(data["visual_timeout"])
+            
+        if "visual_click_x" in data and data["visual_click_x"] is not None:
+            self.click_x.set(data["visual_click_x"])
+        if "visual_click_y" in data and data["visual_click_y"] is not None:
+            self.click_y.set(data["visual_click_y"])
+            self._draw_click_marker()
+            
+        if "on_fail" in data:
+            self.var_on_fail.set(data["on_fail"])
+            
+        if "on_found" in data and data["on_found"] is not None:
+            self.cmb_on_found.set(data["on_found"])
+        elif data.get("visual_click_type") == "double":
+            self.cmb_on_found.set("(None - just double click at point)")
+        elif data.get("visual_click_type") == "right":
+            self.cmb_on_found.set("(None - just right click at point)")
+        else:
+            self.cmb_on_found.set("(None - just click at point)")
+            
+        if "on_not_found" in data and data["on_not_found"] is not None:
+            self.cmb_on_not_found.set(data["on_not_found"])
+        else:
+            self.cmb_on_not_found.set("(None)")
         
     def _on_template_select(self, event=None):
         """Handle template selection - load and display image."""
@@ -295,6 +341,67 @@ class VisualStepDialog(tk.Toplevel):
             outline="red", width=2, tags="marker"
         )
         
+    def _create_new_atomic(self, combobox):
+        from tkinter import simpledialog, messagebox
+        import threading
+        
+        name = simpledialog.askstring("New Atomic", "Enter a name for the new atomic mission:")
+        if not name:
+            return
+        name = name.strip()
+        if not name:
+            return
+            
+        if name.endswith(".jsonl"):
+            name = name[:-6]
+            
+        filepath = ATOMIC_DIR / f"{name}.jsonl"
+        if filepath.exists():
+            messagebox.showerror("Error", f"Atomic mission '{name}' already exists.")
+            return
+            
+        # Hide the dialog and app so the user can interact with the desktop
+        self.grab_release()
+        self.withdraw()
+        if hasattr(self, 'app') and self.app:
+            self.app.withdraw()
+            
+        self.app.log_message(f"Starting recording of atomic mission '{name}'...")
+        
+        def _run_record():
+            try:
+                from xiswalker.recorder import record_mission
+                record_mission(name, visual=False)
+                self.after(0, lambda: _record_done(None))
+            except Exception as e:
+                self.after(0, lambda: _record_done(e))
+                
+        def _record_done(error):
+            if hasattr(self, 'app') and self.app:
+                self.app.deiconify()
+            
+            self.deiconify()
+            self.lift()
+            self.attributes('-topmost', True)
+            
+            def _restore_state():
+                self.attributes('-topmost', False)
+                self.focus_force()
+                self.grab_set()
+                
+                if error:
+                    messagebox.showerror("Error", f"Failed to record atomic:\n{error}")
+                else:
+                    self._refresh_atomics()
+                    combobox.set(name)
+                    self.app.log_message(f"Successfully recorded new atomic: {name}")
+                    if hasattr(self.app, 'tab_dashboard'):
+                        self.app.tab_dashboard.refresh_missions()
+                        
+            self.after(200, _restore_state)
+
+        threading.Thread(target=_run_record, daemon=True).start()
+
     def _on_confirm(self):
         """Handle confirm button - build step dict."""
         if not self.selected_template:

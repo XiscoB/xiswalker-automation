@@ -76,26 +76,30 @@ def countdown(seconds: int = 5) -> None:
     print("  GO!", flush=True)
 
 
-def capture_template(name: str) -> None:
+def capture_template(name: str, use_right_click: bool = False) -> None:
     """Interactively capture a screen region and save as template."""
     from xiswalker.visual import VisualMatcher
     import cv2
     
     TEMPLATES_DIR.mkdir(parents=True, exist_ok=True)
     
+    click_btn_str = "right-click" if use_right_click else "left-click"
     print(f"\n📸 Capturing template: {name}")
-    print("   Please left-click and drag to select the region.")
+    print(f"   Please {click_btn_str} and drag to select the region.")
     
     start_pos = None
     end_pos = None
     
     def on_click(x, y, button, pressed):
         nonlocal start_pos, end_pos
-        if button == mouse.Button.left:
+        target_btn = mouse.Button.right if use_right_click else mouse.Button.left
+        if button == target_btn:
             if pressed:
                 start_pos = (x, y)
                 print(f"   Start: {start_pos}...", end="\r")
             else:
+                if start_pos is None:
+                    return True
                 end_pos = (x, y)
                 print(f"   Start: {start_pos} -> End: {end_pos}")
                 return False  # stop listener
@@ -281,6 +285,20 @@ def record_mission(name: str, visual: bool = False) -> None:
         )
         events.append(event)
 
+    def on_scroll(x: int, y: int, dx: int, dy: int) -> None:
+        if stop_event:
+            return
+            
+        event = InputEvent(
+            type="mouse_scroll",
+            timestamp=time.time() - start_time,
+            x=x,
+            y=y,
+            dx=dx,
+            dy=dy,
+        )
+        events.append(event)
+
     print(f"\n🎙️  Recording mission: {name}")
     print(f"   Output: {filepath}")
     print(f"   Press {stop_key_str.upper()} to stop recording.\n")
@@ -299,7 +317,7 @@ def record_mission(name: str, visual: bool = False) -> None:
     kb_listener = keyboard.Listener(
         on_press=on_key_press, on_release=on_key_release
     )
-    mouse_listener = mouse.Listener(on_click=on_click, on_move=on_move)
+    mouse_listener = mouse.Listener(on_click=on_click, on_move=on_move, on_scroll=on_scroll)
 
     kb_listener.start()
     mouse_listener.start()
@@ -532,6 +550,34 @@ def record_relative_mission(name: str, template_name: str, visual: bool = False)
             )
         events.append(event)
 
+    def on_scroll(x: int, y: int, dx: int, dy: int) -> None:
+        if stop_event:
+            return
+            
+        if is_relative_mode:
+            rel_x = x - origin_x
+            rel_y = y - origin_y
+            event = InputEvent(
+                type="mouse_scroll",
+                timestamp=time.time() - start_time,
+                x=rel_x,
+                y=rel_y,
+                dx=dx,
+                dy=dy,
+                relative_to_template=template_name,
+                is_relative=True
+            )
+        else:
+            event = InputEvent(
+                type="mouse_scroll",
+                timestamp=time.time() - start_time,
+                x=x,
+                y=y,
+                dx=dx,
+                dy=dy,
+            )
+        events.append(event)
+
     print(f"\n🎙️  Recording RELATIVE mission: {name}")
     print(f"   Template: {template_name}")
     print(f"   Origin: ({origin_x}, {origin_y})")
@@ -552,7 +598,7 @@ def record_relative_mission(name: str, template_name: str, visual: bool = False)
     kb_listener = keyboard.Listener(
         on_press=on_key_press, on_release=on_key_release
     )
-    mouse_listener = mouse.Listener(on_click=on_click, on_move=on_move)
+    mouse_listener = mouse.Listener(on_click=on_click, on_move=on_move, on_scroll=on_scroll)
 
     kb_listener.start()
     mouse_listener.start()

@@ -100,8 +100,27 @@ class ConfigTab(ttk.Frame):
 
     def load_config(self):
         if not self.config_path.exists():
-            messagebox.showwarning("Warning", f"Config file not found at {self.config_path}")
-            return
+            if not self.config_path.parent.exists():
+                self.config_path.parent.mkdir(parents=True)
+            default_data = {
+                "safety": {
+                    "check_window_focus": False,
+                    "window_patterns": []
+                },
+                "input": {
+                    "recording_stop_key": "esc",
+                    "playback_stop_key": "ctrl+shift+end",
+                    "show_overlay": True
+                }
+            }
+            try:
+                with open(self.config_path, "w", encoding="utf-8") as f:
+                    yaml.dump(default_data, f, sort_keys=False)
+                if hasattr(self, 'app') and hasattr(self.app, 'log_message'):
+                    self.app.log_message("Created default configuration.")
+            except Exception as e:
+                messagebox.showwarning("Warning", f"Config file not found and failed to create default: {e}")
+                return
             
         try:
             with open(self.config_path, "r", encoding="utf-8") as f:

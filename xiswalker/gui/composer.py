@@ -39,6 +39,7 @@ class ComposerTab(ttk.Frame):
         
         self.seq_listbox = tk.Listbox(seq_frame, selectmode=tk.SINGLE, height=10)
         self.seq_listbox.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=5, pady=5)
+        self.seq_listbox.bind('<Double-1>', self.edit_step)
         
         seq_scroll = ttk.Scrollbar(seq_frame, orient="vertical", command=self.seq_listbox.yview)
         self.seq_listbox.configure(yscrollcommand=seq_scroll.set)
@@ -53,6 +54,9 @@ class ComposerTab(ttk.Frame):
         
         btn_down = ttk.Button(btn_frame, text="▼ Move Down", command=self.move_step_down)
         btn_down.pack(side=tk.LEFT, padx=2)
+        
+        btn_edit = ttk.Button(btn_frame, text="Edit", command=self.edit_step)
+        btn_edit.pack(side=tk.LEFT, padx=2)
         
         btn_remove = ttk.Button(btn_frame, text="Remove", command=self.remove_step)
         btn_remove.pack(side=tk.RIGHT, padx=2)
@@ -203,6 +207,31 @@ class ComposerTab(ttk.Frame):
         idx = sel[0]
         self.steps.pop(idx)
         self._update_seq_listbox()
+        
+    def edit_step(self, event=None):
+        """Edit the currently selected step on double click or Edit button."""
+        sel = self.seq_listbox.curselection()
+        if not sel:
+            return
+        idx = sel[0]
+        step = self.steps[idx]
+        
+        if "visual_condition" in step and step["visual_condition"]:
+            dialog = VisualStepDialog(self, self.app, initial_data=step)
+            self.wait_window(dialog)
+            if dialog.result:
+                self.steps[idx] = dialog.result
+                self._update_seq_listbox()
+                self.app.log_message(f"Updated visual step: {dialog.result['visual_condition']}")
+        elif "ocr_text" in step and step["ocr_text"]:
+            dialog = OcrStepDialog(self, self.app, initial_data=step)
+            self.wait_window(dialog)
+            if dialog.result:
+                self.steps[idx] = dialog.result
+                self._update_seq_listbox()
+                self.app.log_message(f"Updated OCR step: {dialog.result['ocr_text']}")
+        else:
+            messagebox.showinfo("Info", "Only Visual and OCR conditional steps can be edited currently.")
         
     def move_step_up(self):
         """Move selected step up in the sequence."""

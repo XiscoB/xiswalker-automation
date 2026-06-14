@@ -47,6 +47,7 @@ def _find_pytesseract(
     screenshot,
     threshold: float,
     case_sensitive: bool,
+    partial_match: bool = False,
 ) -> OcrMatchResult:
     """Search for *target* in *screenshot* using pytesseract word-level OCR.
 
@@ -62,6 +63,33 @@ def _find_pytesseract(
     data = pytesseract.image_to_data(
         screenshot, output_type=pytesseract.Output.DICT
     )
+    
+    if partial_match:
+        # Reconstruct full text to allow multi-word substring matches
+        words_only = [w for w in data["text"] if w.strip()]
+        full_text = " ".join(words_only)
+        a_full = target if case_sensitive else target.lower()
+        b_full = full_text if case_sensitive else full_text.lower()
+        
+        if a_full in b_full:
+            # We found the phrase! Try to find the bounding box of the first word
+            first_target_word = target.split()[0] if target.split() else target
+            a_word = first_target_word if case_sensitive else first_target_word.lower()
+            
+            for i, word in enumerate(data["text"]):
+                if not word.strip():
+                    continue
+                b_word = word if case_sensitive else word.lower()
+                if a_word in b_word or fuzzy_ratio(a_word, b_word) > 0.7:
+                    return OcrMatchResult(
+                        found=True, 
+                        x=data["left"][i], y=data["top"][i], 
+                        w=data["width"][i], h=data["height"][i], 
+                        text=target
+                    )
+            
+            # Fallback if we couldn't align the word
+            return OcrMatchResult(found=True, text=target)
 
     best_ratio = 0.0
     best_idx = -1
@@ -72,6 +100,7 @@ def _find_pytesseract(
 
         a = target if case_sensitive else target.lower()
         b = word if case_sensitive else word.lower()
+        
         ratio = fuzzy_ratio(a, b)
 
         if ratio > best_ratio:
@@ -122,6 +151,7 @@ def _find_ollama(
     roi: Optional[List[int]],
     threshold: float = 0.8,
     case_sensitive: bool = False,
+    partial_match: bool = False,
 ) -> OcrMatchResult:
     """Extract all visible text via an Ollama model, then fuzzy-search for *target*.
 
@@ -159,16 +189,32 @@ def _find_ollama(
         if not full_text:
             return OcrMatchResult(found=False)
 
-        # Python-side fuzzy word matching (same approach as pytesseract backend)
         best_ratio = 0.0
         best_word = ""
-        for word in full_text.split():
+        
+        if partial_match:
             a = target if case_sensitive else target.lower()
-            b = word if case_sensitive else word.lower()
-            ratio = fuzzy_ratio(a, b)
-            if ratio > best_ratio:
-                best_ratio = ratio
-                best_word = word
+            b = full_text if case_sensitive else full_text.lower()
+            if a in b:
+                best_ratio = 1.0
+                best_word = target
+        
+        if best_ratio < threshold:
+            for word in full_text.split():
+                a = target if case_sensitive else target.lower()
+                b = word if case_sensitive else word.lower()
+                
+                if partial_match:
+                    if a in b:
+                        ratio = 1.0
+                    else:
+                        ratio = fuzzy_ratio(a, b)
+                else:
+                    ratio = fuzzy_ratio(a, b)
+                    
+                if ratio > best_ratio:
+                    best_ratio = ratio
+                    best_word = word
 
         if best_ratio >= threshold:
             # Pure OCR models don't return per-word coords — return ROI centre
@@ -204,6 +250,7 @@ class OcrMatcher:
         backend: str = "pytesseract",
         model: str = "llava",
         case_sensitive: bool = False,
+        partial_match: bool = False,
     ) -> OcrMatchResult:
         """Search for *target* text on screen, retrying until *timeout* seconds.
 
@@ -228,11 +275,11 @@ class OcrMatcher:
             if backend == "ollama":
                 result = _find_ollama(
                     target, screenshot, model, self.ollama_url, roi,
-                    threshold, case_sensitive,
+                    threshold, case_sensitive, partial_match
                 )
             else:
                 result = _find_pytesseract(
-                    target, screenshot, threshold, case_sensitive
+                    target, screenshot, threshold, case_sensitive, partial_match
                 )
 
             if result.found:

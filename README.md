@@ -38,6 +38,50 @@ Player → Visual Matcher (OpenCV) + OCR Engine (Tesseract / Ollama)
 **Infrastructure:** schedule · colorama · tqdm · PyInstaller  
 **Patterns:** Priority queue threading · Cooperative preemption · Template matching · Fuzzy string matching
 
+## Installation and Setup
+
+When setting up this project on a new machine, you need to create a virtual environment and install the package and its dependencies.
+
+1. **Clone the repository and enter the directory:**
+   ```bash
+   git clone <your-repo-url>
+   cd xiswalker-visual-testing
+   ```
+
+2. **Create a virtual environment:**
+   ```bash
+   python -m venv .venv
+   ```
+
+3. **Activate the virtual environment:**
+   - On **Windows (PowerShell)**:
+     ```powershell
+     .\.venv\Scripts\Activate.ps1
+     ```
+   - On **Windows (Command Prompt)**:
+     ```cmd
+     .\.venv\Scripts\activate.bat
+     ```
+   - On **macOS/Linux**:
+     ```bash
+     source .venv/bin/activate
+     ```
+
+4. **Upgrade pip and install the package with dependencies:**
+   *(Ensure your virtual environment is activated before running this)*
+   ```bash
+   python -m pip install --upgrade pip setuptools wheel
+   pip install -e .[dev,ocr,llm]
+   ```
+   *Note: Using `-e` installs it in editable mode so any code changes reflect immediately.*
+
+5. **Verify the installation:**
+   ```bash
+   xiswalker --help
+   # or launch the GUI:
+   xiswalker gui
+   ```
+
 ## Usage Example
 
 ```bash

@@ -1,4 +1,4 @@
-﻿"""Player module â€” replays recorded JSONL missions."""
+"""Player module â€” replays recorded JSONL missions."""
 
 import time
 from pathlib import Path
@@ -246,7 +246,7 @@ def _play_atomic_events(
                 safety._on_emergency_stop()
                 return False
 
-        elif event.type in ("mouse_click", "mouse_press", "mouse_release", "mouse_move"):
+        elif event.type in ("mouse_click", "mouse_press", "mouse_release", "mouse_move", "mouse_scroll"):
             x = event.x
             y = event.y
             
@@ -299,6 +299,10 @@ def _play_atomic_events(
                 safety.safe_press_mouse(button)
             elif event.type == "mouse_release":
                 safety.safe_release_mouse(button)
+            elif event.type == "mouse_scroll":
+                dx = event.dx if event.dx is not None else 0
+                dy = event.dy if event.dy is not None else 0
+                ms.scroll(dx, dy)
 
     return True
 
@@ -689,6 +693,7 @@ def play_composite(
                     threshold = step.ocr_threshold if step.ocr_threshold is not None else 0.8
                     timeout = step.ocr_timeout if step.ocr_timeout is not None else 5.0
                     case_sensitive = step.ocr_case_sensitive if step.ocr_case_sensitive is not None else False
+                    partial_match = step.ocr_partial_match if step.ocr_partial_match is not None else False
 
                     print(
                         f"   Searching via {backend} (threshold={threshold}, timeout={timeout}s)...",
@@ -704,6 +709,7 @@ def play_composite(
                         backend=backend,
                         model=model,
                         case_sensitive=case_sensitive,
+                        partial_match=partial_match,
                     )
 
                     if ocr_result.found:
